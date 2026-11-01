@@ -1,0 +1,95 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # Как у Mist: Intel-сервер, плагин собирается универсальным (arm64 + x86_64),
+    # тесты и валидаторы проверяют x86_64-часть.
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # вся история и теги — для проверки приватности и релизов
+
+      # Ничего личного в публичный репозиторий: почты, ключи, ссылки на переписку с ИИ
+      - name: Privacy check
+        run: bash scripts/privacy-check.sh
+
+      # У каждой версии должен быть патчноут: docs/releases/<VERSION>.md
+      - name: Release notes check
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          test -s "docs/releases/$VERSION.md" || { echo "::error::Нет патчноута docs/releases/$VERSION.md"; exit 1; }
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps/juce-src
+          key: juce-src-8.0.10-${{ runner.os }}-${{ github.repository }}
+
+      - name: Configure
+        run: cmake -B build -G Xcode -DEIDO_BUILD_TESTS=ON "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+
+      - name: Build plugin (VST3 + AU)
+        run: cmake --build build --config Release --target Eido_VST3 Eido_AU -- -quiet
+
+      - name: Build and run test
+        run: |
+          cmake --build build --config Release --target EidoTest -- -quiet
+          ./build/EidoTest_artefacts/Release/EidoTest "$RUNNER_TEMP/render"
+
+      - name: Ad-hoc sign
+        run: |
+          codesign --force --deep -s - build/Eido_artefacts/Release/VST3/Eido.vst3
+          codesign --force --deep -s - build/Eido_artefacts/Release/AU/Eido.component
+
+      - name: Validate with pluginval
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
+          unzip -q pluginval.zip
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --validate-in-process \
+            --timeout-ms 600000 build/Eido_artefacts/Release/VST3/Eido.vst3
+
+      - name: Validate AU
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R build/Eido_artefacts/Release/AU/Eido.component ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -v aufx Eido Prsn
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp -R build/Eido_artefacts/Release/VST3/Eido.vst3 dist/
+          cp -R build/Eido_artefacts/Release/AU/Eido.component dist/
+          cp scripts/install-mac.sh dist/
+          cd dist && zip -qry ../Eido-macOS.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Eido-macOS
+          path: Eido-macOS.zip
+
+      # Текущая версия: архив + патчноут. Постоянная ссылка:
+      # https://github.com/controloptioncommand/Eido-vst/releases/latest/download/Eido-macOS.zip
+      - name: Publish release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # имя релиза — из файла VERSION; повторная сборка той же версии обновляет релиз
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          gh release delete "$VERSION" --cleanup-tag -y || true
+          gh release create "$VERSION" Eido-macOS.zip \
+            --target "${{ github.sha }}" \
+            --title "$VERSION" \
+            --notes-file "docs/releases/$VERSION.md" \
+            --latest
