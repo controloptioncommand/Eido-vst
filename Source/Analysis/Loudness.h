@@ -22,6 +22,7 @@ public:
     float shortTerm() const  { return sLufs.load(); }
     float integrated() const { return iLufs.load(); }
     float maxMomentary() const { return mMax.load(); }
+    float loudnessRange() const { return lraLu.load(); }   // LRA, LU (EBU Tech 3342); 0 — пока нет данных
 
 private:
     struct Biquad
@@ -52,8 +53,11 @@ private:
     static constexpr int kBins = 800;
     std::array<juce::uint32, kBins> histCount {};
     std::array<double, kBins> histEnergy {};
+    // гистограмма Short-term для LRA
+    std::array<juce::uint32, kBins> stCount {};
+    std::array<double, kBins> stEnergy {};
 
-    std::atomic<float> mLufs { kSilent }, sLufs { kSilent }, iLufs { kSilent }, mMax { kSilent };
+    std::atomic<float> mLufs { kSilent }, sLufs { kSilent }, iLufs { kSilent }, mMax { kSilent }, lraLu { 0.0f };
     std::atomic<bool> resetRequested { false };
 };
 } // namespace eido

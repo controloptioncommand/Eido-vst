@@ -48,7 +48,10 @@ void LoudnessMeter::clear()
     subCount = subWrite = 0;
     histCount.fill (0);
     histEnergy.fill (0.0);
+    stCount.fill (0);
+    stEnergy.fill (0.0);
     mLufs = sLufs = iLufs = mMax = kSilent;
+    lraLu = 0.0f;
 }
 
 void LoudnessMeter::process (const float* l, const float* r, int n)
@@ -112,6 +115,38 @@ void LoudnessMeter::finishSubBlock()
             iLufs = c2 > 0 ? toLufs (s2 / (double) c2) : kSilent;
         }
     }
-    sLufs = subCount >= 30 ? toLufs (meanOfLast (30)) : kSilent;
+    if (subCount < 30) { sLufs = kSilent; return; }
+    const double se = meanOfLast (30);
+    const float ls = toLufs (se);
+    sLufs = ls;
+
+    // LRA: Short-term каждые 100 мс, порог −70 LUFS, относительный −20 LU, затем L95 − L10
+    if (ls > -70.0f)
+    {
+        const int bin = juce::jlimit (0, kBins - 1, (int) ((ls + 70.0f) * 10.0f));
+        ++stCount[(size_t) bin];
+        stEnergy[(size_t) bin] += se;
+    }
+    double sum = 0.0;
+    juce::uint64 cnt = 0;
+    for (int b = 0; b < kBins; ++b) { sum += stEnergy[(size_t) b]; cnt += stCount[(size_t) b]; }
+    if (cnt < 2) return;
+    const float gate = toLufs (sum / (double) cnt) - 20.0f;
+    const int gb = juce::jlimit (0, kBins - 1, (int) std::ceil ((gate + 70.0f) * 10.0f));
+    juce::uint64 total = 0;
+    for (int b = gb; b < kBins; ++b) total += stCount[(size_t) b];
+    if (total < 2) return;
+    auto percentile = [&] (double p)
+    {
+        const auto target = (juce::uint64) std::ceil (p * (double) total);
+        juce::uint64 acc = 0;
+        for (int b = gb; b < kBins; ++b)
+        {
+            acc += stCount[(size_t) b];
+            if (acc >= juce::jmax ((juce::uint64) 1, target)) return -70.0f + ((float) b + 0.5f) * 0.1f;
+        }
+        return -70.0f + ((float) kBins - 0.5f) * 0.1f;
+    };
+    lraLu = juce::jmax (0.0f, percentile (0.95) - percentile (0.10));
 }
 } // namespace eido

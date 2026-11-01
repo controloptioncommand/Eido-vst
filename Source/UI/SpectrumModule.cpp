@@ -29,7 +29,8 @@ juce::String freqText (float f)
 }
 } // namespace
 
-SpectrumModule::SpectrumModule (const SignalBuffer& s) : Module (ModuleType::Spectrum, s)
+SpectrumModule::SpectrumModule (const SignalBuffer& s, bool ms)
+    : Module (ms ? ModuleType::MidSide : ModuleType::Spectrum, s), midSide (ms)
 {
     if (windowGain <= 0.0f)
     {
@@ -43,10 +44,17 @@ SpectrumModule::SpectrumModule (const SignalBuffer& s) : Module (ModuleType::Spe
 
 void SpectrumModule::tick()
 {
-    // каждый кадр — последние 8192 сэмпла
+    analyse (false, smooth);
+    if (midSide) analyse (true, side);
+}
+
+void SpectrumModule::analyse (bool sideSignal, std::vector<float>& into)
+{
+    // каждый кадр — последние 8192 сэмпла; середина (L+R)/2 или сторона (L−R)/2
     const juce::int64 start = sig.written - kSize;
     if (start < 0) return;
-    for (int i = 0; i < kSize; ++i) buf[(size_t) i] = sig.mono (start + i);
+    for (int i = 0; i < kSize; ++i)
+        buf[(size_t) i] = sideSignal ? 0.5f * (sig.left (start + i) - sig.right (start + i)) : sig.mono (start + i);
     std::fill (buf.begin() + kSize, buf.end(), 0.0f);
     window.multiplyWithWindowingTable (buf.data(), (size_t) kSize);
     fft.performFrequencyOnlyForwardTransform (buf.data(), true);
@@ -57,8 +65,8 @@ void SpectrumModule::tick()
     for (int b = 0; b < kSize / 2; ++b)
     {
         const float db = juce::Decibels::gainToDecibels (buf[(size_t) b] * norm, -120.0f);
-        auto& s = smooth[(size_t) b];
-        s = db > s ? s + (db - s) * 0.7f : juce::jmax (db, s - release);
+        auto& v = into[(size_t) b];
+        v = db > v ? v + (db - v) * 0.7f : juce::jmax (db, v - release);
     }
 }
 
@@ -68,7 +76,7 @@ float SpectrumModule::freqAt (float x) const
     return kFMin * std::pow (kFMax / kFMin, t);
 }
 
-float SpectrumModule::dbAt (float f) const
+float SpectrumModule::dbAt (float f, const std::vector<float>& smooth) const
 {
     const float bf = f / (float) sig.sampleRate * (float) kSize;
     const int b0 = juce::jlimit (0, kSize / 2 - 2, (int) bf);
@@ -92,6 +100,9 @@ float SpectrumModule::peakFrequency() const
 juce::String SpectrumModule::readout (float x) const
 {
     const float f = freqAt (x);
+    if (midSide)
+        return "Mid " + formatDb (dbAt (f, smooth), 1, -119.0f) + midDot() + "Side " + formatDb (dbAt (f, side), 1, -119.0f)
+               + " dB" + midDot() + freqText (f);
     return formatDb (dbAt (f), 1, -119.0f) + " dB" + midDot() + freqText (f) + midDot() + noteName (f);
 }
 
@@ -115,30 +126,8 @@ void SpectrumModule::paintContent (juce::Graphics& g, juce::Rectangle<float> r)
                     juce::Rectangle<float> (mapX (f) + 4.0f, plot.getY() - 16.0f, 40.0f, 14.0f), juce::Justification::centredLeft);
 
     // кривая с наклоном tilt дБ/окт вокруг 1 кГц; заливка — рампа по высоте, 10 корзин
-    const int W = juce::jmax (2, (int) plot.getWidth());
-    const float binPerHz = (float) kSize / (float) sig.sampleRate;
-    juce::Path curve;
     juce::RectangleList<float> buckets[10];
-    for (int i = 0; i <= W; ++i)
-    {
-        const float x = plot.getX() + (float) i;
-        const float f = freqAt (x);
-        const float bA = freqAt (x - 0.5f) * binPerHz, bB = freqAt (x + 0.5f) * binPerHz;
-        float db;
-        if (bB - bA < 1.0f) db = dbAt (f);
-        else
-        {
-            db = -120.0f;
-            for (int b = juce::jmax (1, (int) std::ceil (bA)); b <= juce::jmin (kSize / 2 - 1, (int) bB); ++b)
-                db = juce::jmax (db, smooth[(size_t) b]);
-        }
-        db += tiltPerOct * std::log2 (f / 1000.0f);
-        const float y = mapY (db);
-        if (i == 0) curve.startNewSubPath (x, y); else curve.lineTo (x, y);
-        const float t = 1.0f - (y - plot.getY()) / plot.getHeight();
-        if (y < plot.getBottom() - 0.5f)
-            buckets[juce::jlimit (0, 9, (int) (t * 10.0f))].addWithoutMerging ({ x, y, 1.0f, plot.getBottom() - y });
-    }
+    const auto curve = curvePath (smooth, buckets);
     const auto bg = background();
     for (int b = 0; b < 10; ++b)
     {
@@ -148,6 +137,27 @@ void SpectrumModule::paintContent (juce::Graphics& g, juce::Rectangle<float> r)
     }
     g.setColour (Colours::ink.withAlpha (0.9f));
     g.strokePath (curve, juce::PathStrokeType (1.3f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    // Mid / Side: сторона — линией цвета Modulator, без заливки; подписи сверху слева
+    if (midSide)
+    {
+        g.setColour (Colours::modulator);
+        g.strokePath (curvePath (side, nullptr), juce::PathStrokeType (1.3f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        if (r.getWidth() >= 220.0f)
+        {
+            auto key = juce::Rectangle<float> (plot.getX() + 8.0f, plot.getY() + 6.0f, 120.0f, 32.0f);
+            g.setFont (LnF::font (LnF::Type::caption, true));
+            for (auto [name, c] : { std::pair<const char*, juce::Colour> { "Mid", Colours::ink }, { "Side", Colours::modulator } })
+            {
+                auto row = key.removeFromTop (16.0f);
+                g.setColour (c);
+                g.fillRect (row.removeFromLeft (12.0f).withSizeKeepingCentre (12.0f, 2.0f));
+                row.removeFromLeft (6.0f);
+                g.setColour (Colours::ink2);
+                g.drawText (name, row, juce::Justification::centredLeft);
+            }
+        }
+    }
 
     // курсор: тонкая линия и точка на кривой
     if (isHovering() && plot.contains (getPointer()))
@@ -159,6 +169,35 @@ void SpectrumModule::paintContent (juce::Graphics& g, juce::Rectangle<float> r)
         g.setColour (Colours::signal);
         g.fillEllipse (x - 3.0f, y - 3.0f, 6.0f, 6.0f);
     }
+}
+
+juce::Path SpectrumModule::curvePath (const std::vector<float>& curve, juce::RectangleList<float>* buckets) const
+{
+    const auto mapY = [this] (float db) { return plot.getY() + plot.getHeight() * juce::jlimit (0.0f, 1.0f, (kTopDb - db) / kRangeDb); };
+    const int W = juce::jmax (2, (int) plot.getWidth());
+    const float binPerHz = (float) kSize / (float) sig.sampleRate;
+    juce::Path path;
+    for (int i = 0; i <= W; ++i)
+    {
+        const float x = plot.getX() + (float) i;
+        const float f = freqAt (x);
+        const float bA = freqAt (x - 0.5f) * binPerHz, bB = freqAt (x + 0.5f) * binPerHz;
+        float db;
+        if (bB - bA < 1.0f) db = dbAt (f, curve);
+        else
+        {
+            db = -120.0f;
+            for (int b = juce::jmax (1, (int) std::ceil (bA)); b <= juce::jmin (kSize / 2 - 1, (int) bB); ++b)
+                db = juce::jmax (db, curve[(size_t) b]);
+        }
+        db += tiltPerOct * std::log2 (f / 1000.0f);
+        const float y = mapY (db);
+        if (i == 0) path.startNewSubPath (x, y); else path.lineTo (x, y);
+        const float t = 1.0f - (y - plot.getY()) / plot.getHeight();
+        if (buckets != nullptr && y < plot.getBottom() - 0.5f)
+            buckets[juce::jlimit (0, 9, (int) (t * 10.0f))].addWithoutMerging ({ x, y, 1.0f, plot.getBottom() - y });
+    }
+    return path;
 }
 
 void SpectrumModule::paintTopRight (juce::Graphics& g, juce::Rectangle<float> area)

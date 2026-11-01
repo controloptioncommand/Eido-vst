@@ -75,8 +75,9 @@ bool Segmented::keyPressed (const juce::KeyPress& k)
 void LogoButton::paintButton (juce::Graphics& g, bool over, bool)
 {
     // пиксель шрифта = 1 px окна (на Retina — 2 физических): логотип читается именно пиксельным
-    LnF::drawPixelText (g, "Eido", getLocalBounds(), 1, over ? Colours::ink.withAlpha (0.75f) : Colours::ink);
-    if (hasKeyboardFocus (false)) LnF::drawFocusRing (g, getLocalBounds().toFloat(), 8.0f);
+    // фокус — без обводки: логотип просто становится сигнальным (оранжевым)
+    const auto c = hasKeyboardFocus (false) ? Colours::signal : over ? Colours::ink.withAlpha (0.75f) : Colours::ink;
+    LnF::drawPixelText (g, "Eido", getLocalBounds(), 1, c);
 }
 
 void IconButton::paintButton (juce::Graphics& g, bool over, bool down)

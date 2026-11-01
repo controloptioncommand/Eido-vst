@@ -18,8 +18,8 @@ public:
     void resized() override;
 
     enum class Layout { Strip = 0, Grid = 1 };
-    static constexpr int kSlots = 6;
-    static constexpr int kStripW = 1280, kStripH = 240, kGridW = 1120, kGridH = 720;
+    static constexpr int kSlots = 8;
+    static constexpr int kStripW = 1600, kStripH = 240, kGridW = 1400, kGridH = 720, kGridCols = 4;
 
     void setLayout (Layout l);
     Layout getLayout() const { return layout; }
@@ -47,6 +47,7 @@ private:
     void layoutModules();
     void saveSlots();
     int slotOf (const Module& m) const;
+    int slotAt (juce::Point<int> p) const;
 
     EidoProcessor& proc;
     EidoLookAndFeel lnf;
@@ -66,6 +67,7 @@ private:
     juce::String statusText;
 
     std::array<std::unique_ptr<Module>, kSlots> modules;
+    int dropTarget = -1;   // слот под перетаскиваемым модулем
     AboutPage about;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EidoEditor)

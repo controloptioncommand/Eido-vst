@@ -140,6 +140,48 @@ int main (int argc, char** argv)
         CHECK (near (p.loudness.integrated(), -40.0f, 0.2f), "reset");
     }
 
+    // 3б. LRA по EBU Tech 3342: 20 с синуса на −20 дБFS и 20 с на −30 → 10 LU (±1)
+    {
+        EidoProcessor p;
+        p.prepareToPlay (48000.0, 512);
+        Gen g; g.amp = juce::Decibels::decibelsToGain (-20.0f);
+        run (p, g, 20.0);
+        g.amp = juce::Decibels::decibelsToGain (-30.0f);
+        run (p, g, 20.0);
+        std::cout << "LRA " << p.loudness.loudnessRange() << " LU\n";
+        CHECK (near (p.loudness.loudnessRange(), 10.0f, 1.0f), "LRA must be 10 LU");
+    }
+
+    // 3в. Высота тона: синусы и пила, 44.1 и 48 кГц — ошибка меньше 3 центов, без октавных ошибок
+    {
+        PitchDetector det;
+        for (double sr : { 44100.0, 48000.0 })
+            for (float f : { 30.0f, 55.0f, 110.0f, 220.0f, 440.0f, 1000.0f, 2500.0f, 4853.0f })
+                for (int saw = 0; saw < 2; ++saw)
+                {
+                    std::vector<float> x ((size_t) PitchDetector::kN);
+                    double ph = 0.0;
+                    for (auto& v : x)
+                    {
+                        v = saw ? (float) (ph * 2.0 - 1.0) * 0.3f : (float) std::sin (ph * juce::MathConstants<double>::twoPi) * 0.3f;
+                        ph += f / sr;
+                        ph -= std::floor (ph);
+                    }
+                    if (saw && f > 2000.0f) continue;   // пила выше 2 кГц без антиалиасинга — не честный тест
+                    const auto r = det.analyse (x.data(), sr);
+                    const float err = r.found ? 1200.0f * std::log2 (r.freq / f) : 9999.0f;
+                    if (std::abs (err) > 3.0f)
+                        std::cout << "  pitch " << (saw ? "saw " : "sine ") << f << " Hz @" << sr << ": " << r.freq << " (" << err << " ct)\n";
+                    CHECK (std::abs (err) <= 3.0f, "pitch " << f << " Hz");
+                }
+        std::cout << "pitch: notes " << PitchDetector::noteName (440.0f) << " " << PitchDetector::noteName (523.25f) << " "
+                  << PitchDetector::noteName (73.42f) << " " << PitchDetector::noteName (4853.0f) << "\n";
+        CHECK (PitchDetector::noteName (440.0f) == "A4" && PitchDetector::noteName (523.25f) == "C5"
+               && PitchDetector::noteName (73.42f) == "D2" && PitchDetector::noteName (4853.0f) == "D#8", "note names");
+        std::vector<float> silence ((size_t) PitchDetector::kN, 0.0f);
+        CHECK (! det.analyse (silence.data(), 48000.0).found, "silence has no pitch");
+    }
+
     // 4. Модули и скриншоты
     {
         EidoProcessor p;
@@ -153,6 +195,10 @@ int main (int argc, char** argv)
         ed->setModule (1, ModuleType::Stereo);
         ed->setModule (2, ModuleType::VU);
         ed->setModule (3, ModuleType::Loudness);
+        ed->setModule (4, ModuleType::Tuner);
+        ed->setModule (5, ModuleType::Oscilloscope);
+        ed->setModule (6, ModuleType::MidSide);
+        ed->setModule (7, ModuleType::PeakHistory);
         (void) ed->createComponentSnapshot (ed->getLocalBounds());   // разметка графиков считается при отрисовке
 
         Gen g;
@@ -173,10 +219,27 @@ int main (int argc, char** argv)
             std::cout << "spectrum readout: " << txt << "\n";
             CHECK (txt.contains ("Hz") && txt.contains ("ct"), "spectrum readout");
         }
+        auto* tuner = dynamic_cast<TunerModule*> (ed->getModule (4));
+        auto* osc = dynamic_cast<OscilloscopeModule*> (ed->getModule (5));
+        auto* ms = dynamic_cast<SpectrumModule*> (ed->getModule (6));
+        std::cout << "tuner " << tuner->getNote() << " " << tuner->getFrequency() << " Hz, oscilloscope " << osc->getSpanMs() << " ms\n";
+        CHECK (tuner->hasPitch() && tuner->getNote() == "B5" && near (tuner->getFrequency(), 1000.0f, 1.0f), "tuner 1 kHz");
+        CHECK (near (osc->getSpanMs(), 8.0f, 0.05f), "oscilloscope: 8 periods of 1 kHz");
+        CHECK (ms->levelAt (1000.0f) > -20.0f && ms->levelAt (1000.0f, true) < -80.0f, "mid/side: mono signal has no side");
         g.kind = Gen::SineInverted;
-        run (p, g, 1.0, ed);
-        std::cout << "inverted correlation " << stereo->getCorrelation() << "\n";
+        run (p, g, 3.0, ed);
+        std::cout << "inverted correlation " << stereo->getCorrelation() << ", mid " << ms->levelAt (1000.0f) << " side " << ms->levelAt (1000.0f, true) << "\n";
         CHECK (stereo->getCorrelation() < -0.98f, "correlation of inverted signal");
+        CHECK (ms->levelAt (1000.0f, true) > -20.0f && ms->levelAt (1000.0f) < -80.0f, "mid/side: inverted signal is all side");
+
+        // перетаскивание: модуль 0 бросили на модуль 3 — поменялись местами
+        {
+            auto* m0 = ed->getModule (0);
+            const auto t3 = ed->getModule (3)->getType();
+            m0->onDrop (*m0, ed->getModule (3)->getBounds().getCentre());
+            CHECK (ed->getModule (3) == m0 && ed->getModule (0)->getType() == t3, "drag and drop swap");
+            ed->getModule (0)->onDrop (*ed->getModule (0), ed->getModule (3)->getBounds().getCentre());
+        }
 
         // смена модуля, перестановка, сохранение состояния
         ed->moveModule (0, 1);
@@ -190,7 +253,8 @@ int main (int argc, char** argv)
             CHECK ((int) p2.uiState.getProperty ("layout") == 1, "state: layout");
         }
         // раскладка по умолчанию для скриншотов
-        const ModuleType def[] = { ModuleType::Spectrogram, ModuleType::Scope, ModuleType::Loudness, ModuleType::Stereo, ModuleType::VU, ModuleType::Spectrum };
+        const ModuleType def[] = { ModuleType::Spectrogram, ModuleType::Scope, ModuleType::Oscilloscope, ModuleType::Spectrum,
+                                   ModuleType::Loudness, ModuleType::Stereo, ModuleType::VU, ModuleType::Tuner };
         for (int i = 0; i < EidoEditor::kSlots; ++i) ed->setModule (i, def[i]);
         for (int i = 0; i < EidoEditor::kSlots; ++i) ed->getModule (i)->reset();
         p.loudness.requestReset();
@@ -216,15 +280,25 @@ int main (int argc, char** argv)
             shoot ("ui_" + tn + "_grid");
             {
                 // скорость отрисовки сетки
-                double ms = 0;
+                double paintMs = 0;
                 for (int k = 0; k < 20; ++k)
                 {
                     run (p, g, 0.02, ed);
                     const auto a = juce::Time::getMillisecondCounterHiRes();
                     (void) ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f);
-                    ms += juce::Time::getMillisecondCounterHiRes() - a;
+                    paintMs += juce::Time::getMillisecondCounterHiRes() - a;
                 }
-                std::cout << "  grid paint: " << juce::String (ms / 20.0, 2) << " ms/frame\n";
+                std::cout << "  grid paint: " << juce::String (paintMs / 20.0, 2) << " ms/frame\n";
+            }
+            {
+                // остальные модули
+                const ModuleType more[] = { ModuleType::Waves, ModuleType::PeakHistory, ModuleType::MidSide, ModuleType::LoudnessHistory };
+                const int slots[] = { 1, 2, 3, 4 };
+                for (int k = 0; k < 4; ++k) ed->setModule (slots[k], more[k]);
+                run (p, g, 8.0, ed);
+                shoot ("ui_" + tn + "_grid_more");
+                for (int k = 0; k < 4; ++k) ed->setModule (slots[k], def[slots[k]]);
+                run (p, g, 2.0, ed);
             }
             ed->setLayout (EidoEditor::Layout::Strip);
             run (p, g, 3.0, ed);

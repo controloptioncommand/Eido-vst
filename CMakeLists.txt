@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
 set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "macOS architectures")
 
-project(Eido VERSION 1.0.0 LANGUAGES C CXX)
+project(Eido VERSION 1.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -42,12 +42,15 @@ set(EIDO_SOURCES
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/Analysis/Loudness.cpp
+    Source/Analysis/Pitch.cpp
     Source/UI/LookAndFeel.cpp
     Source/UI/Widgets.cpp
     Source/UI/Module.cpp
     Source/UI/WaveModules.cpp
     Source/UI/SpectrumModule.cpp
     Source/UI/MeterModules.cpp
+    Source/UI/PitchModules.cpp
+    Source/UI/HistoryModules.cpp
     Source/UI/About.cpp)
 
 target_sources(Eido PRIVATE ${EIDO_SOURCES})

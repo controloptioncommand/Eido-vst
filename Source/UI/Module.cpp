@@ -16,11 +16,37 @@ juce::String moduleName (ModuleType t)
         case ModuleType::Loudness:    return "Loudness";
         case ModuleType::VU:          return "VU";
         case ModuleType::Stereo:      return "Stereo";
+        case ModuleType::Tuner:       return "Tuner";
+        case ModuleType::Oscilloscope: return "Oscilloscope";
+        case ModuleType::MidSide:     return "Mid / Side";
+        case ModuleType::LoudnessHistory: return "Loudness History";
+        case ModuleType::PeakHistory: return "Peak History";
         default:                      return {};
     }
 }
 
-juce::String moduleKey (ModuleType t) { return moduleName (t).toLowerCase(); }
+juce::String moduleKey (ModuleType t)
+{
+    switch (t)
+    {
+        case ModuleType::MidSide:         return "midside";
+        case ModuleType::LoudnessHistory: return "loudnesshistory";
+        case ModuleType::PeakHistory:     return "peakhistory";
+        default:                          return moduleName (t).toLowerCase();
+    }
+}
+
+const std::vector<ModuleGroup>& moduleGroups()
+{
+    using T = ModuleType;
+    static const std::vector<ModuleGroup> groups {
+        { "Wave",     { T::Scope, T::Waves, T::Oscilloscope, T::PeakHistory } },
+        { "Spectrum", { T::Spectrum, T::MidSide, T::Spectrogram } },
+        { "Loudness", { T::Loudness, T::LoudnessHistory, T::VU } },
+        { "Stereo and pitch", { T::Stereo, T::Tuner } },
+    };
+    return groups;
+}
 
 ModuleType moduleFromKey (const juce::String& key, ModuleType fallback)
 {
@@ -40,6 +66,11 @@ static juce::String moduleDescription (ModuleType t)
         case ModuleType::Loudness:    return "Peak meters for left and right, momentary and short-term loudness, integrated loudness in LUFS.";
         case ModuleType::VU:          return "Needle VU meter. 0 VU equals -18 dBFS RMS.";
         case ModuleType::Stereo:      return "Polar stereometer and phase correlation from -1 to +1.";
+        case ModuleType::Tuner:       return "Tuner: note name, frequency in hertz and deviation in cents.";
+        case ModuleType::Oscilloscope: return "Oscilloscope: a few periods of the waveform locked to the detected pitch.";
+        case ModuleType::MidSide:     return "Mid and side spectra on one graph: shows which frequencies are wide.";
+        case ModuleType::LoudnessHistory: return "Short-term and momentary loudness over the last 30 seconds, integrated loudness and loudness range.";
+        case ModuleType::PeakHistory: return "Scrolling peak and RMS history, left channel above, right below.";
         default:                      return {};
     }
 }
@@ -55,6 +86,11 @@ std::unique_ptr<Module> createModule (ModuleType t, const SignalBuffer& s, const
         case ModuleType::Loudness:    return std::make_unique<LoudnessModule> (s, loud);
         case ModuleType::VU:          return std::make_unique<VuModule> (s);
         case ModuleType::Stereo:      return std::make_unique<StereoModule> (s);
+        case ModuleType::Tuner:       return std::make_unique<TunerModule> (s);
+        case ModuleType::Oscilloscope: return std::make_unique<OscilloscopeModule> (s);
+        case ModuleType::MidSide:     return std::make_unique<SpectrumModule> (s, true);
+        case ModuleType::LoudnessHistory: return std::make_unique<LoudnessHistoryModule> (s, loud);
+        case ModuleType::PeakHistory: return std::make_unique<PeakHistoryModule> (s);
         default:                      return std::make_unique<ScopeModule> (s);
     }
 }
@@ -64,7 +100,7 @@ Module::Module (ModuleType t, const SignalBuffer& s) : sig (s), cursor (s.writte
 {
     setWantsKeyboardFocus (true);
     setTitle (moduleName (t));
-    setDescription (moduleDescription (t) + " Option and left or right arrow moves the module, Return opens the module menu.");
+    setDescription (moduleDescription (t) + " Drag it onto another module to swap them. Option and left or right arrow moves the module, Return opens the module menu.");
     setRepaintsOnMouseActivity (false);
 }
 
@@ -159,10 +195,29 @@ void Module::paint (juce::Graphics& g)
 
 void Module::mouseDown (const juce::MouseEvent& e)
 {
-    if (! controlsArea.contains (e.position)) return;
+    dragging = false;
+    pressOnControls = controlsArea.contains (e.position) && controlsVisible();
+    if (! pressOnControls) return;
     const int i = juce::jlimit (0, 2, (int) ((e.position.x - controlsArea.getX()) / controlsArea.getWidth() * 3.0f));
     if (i == 1) { if (onMenu) onMenu (*this); }
     else if (onMove) onMove (*this, i == 0 ? -1 : 1);
+}
+
+// Перетаскивание: тянем модуль за любое место (кроме стрелок) и бросаем на другой — они меняются местами
+void Module::mouseDrag (const juce::MouseEvent& e)
+{
+    if (pressOnControls) return;
+    if (! dragging && e.getDistanceFromDragStart() < 6) return;
+    if (! dragging) { dragging = true; setMouseCursor (juce::MouseCursor::DraggingHandCursor); }
+    if (onDrag) onDrag (*this, e.getEventRelativeTo (getParentComponent()).getPosition());
+}
+
+void Module::mouseUp (const juce::MouseEvent& e)
+{
+    if (! dragging) return;
+    dragging = false;
+    setMouseCursor (juce::MouseCursor::NormalCursor);
+    if (onDrop) onDrop (*this, e.getEventRelativeTo (getParentComponent()).getPosition());
 }
 
 bool Module::keyPressed (const juce::KeyPress& k)

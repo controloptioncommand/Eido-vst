@@ -6,8 +6,9 @@ using LnF = EidoLookAndFeel;
 
 namespace
 {
-const ModuleType kDefaultSlots[EidoEditor::kSlots] = { ModuleType::Spectrogram, ModuleType::Scope, ModuleType::Loudness,
-                                                       ModuleType::Stereo, ModuleType::VU, ModuleType::Spectrum };
+const ModuleType kDefaultSlots[EidoEditor::kSlots] = { ModuleType::Spectrogram, ModuleType::Scope, ModuleType::Oscilloscope,
+                                                       ModuleType::Spectrum, ModuleType::Loudness, ModuleType::Stereo,
+                                                       ModuleType::VU, ModuleType::Tuner };
 
 // относительная ширина модуля в полосе
 float stripWeight (ModuleType t)
@@ -18,6 +19,9 @@ float stripWeight (ModuleType t)
         case ModuleType::VU:       return 1.0f;
         case ModuleType::Stereo:   return 0.9f;
         case ModuleType::Spectrum: return 1.7f;
+        case ModuleType::MidSide:  return 1.7f;
+        case ModuleType::Tuner:    return 1.0f;
+        case ModuleType::LoudnessHistory: return 1.6f;
         default:                   return 1.5f;
     }
 }
@@ -115,13 +119,36 @@ void EidoEditor::rebuildModule (int slot, ModuleType t)
     auto& m = modules[(size_t) slot];
     if (m != nullptr) removeChildComponent (m.get());
     m = createModule (t, signal, proc.loudness);
-    if (auto* sp = dynamic_cast<SpectrumModule*> (m.get()))
-        sp->setTilt ((float) (double) proc.uiState.getProperty ("tilt", 4.5));
+    m->loadSettings (proc.uiState);
     m->onMove = [this] (Module& mod, int dir) { moveModule (slotOf (mod), dir); };
+    m->onDrag = [this] (Module& mod, juce::Point<int> p)
+    {
+        const int t = slotAt (p);
+        const int target = t == slotOf (mod) ? -1 : t;
+        if (target != dropTarget) { dropTarget = target; repaint(); }
+    };
+    m->onDrop = [this] (Module& mod, juce::Point<int> p)
+    {
+        const int from = slotOf (mod), to = slotAt (p);
+        dropTarget = -1;
+        if (to >= 0 && to != from)
+        {
+            std::swap (modules[(size_t) from], modules[(size_t) to]);
+            saveSlots();
+            layoutModules();
+        }
+        repaint();
+    };
     m->onMenu = [this] (Module& mod) { showModuleMenu (mod); };
     m->setMouseClickGrabsKeyboardFocus (false);
     addAndMakeVisible (*m);
     if (about.isVisible()) about.toFront (false);
+}
+
+int EidoEditor::slotAt (juce::Point<int> p) const
+{
+    for (int i = 0; i < kSlots; ++i) if (modules[(size_t) i]->getBounds().contains (p)) return i;
+    return -1;
 }
 
 int EidoEditor::slotOf (const Module& m) const
@@ -215,9 +242,16 @@ void EidoEditor::showModuleMenu (Module& mod)
 {
     const int slot = slotOf (mod);
     juce::PopupMenu m;
-    m.addSectionHeader ("Module");
-    for (int i = 0; i < (int) ModuleType::Count; ++i)
-        m.addItem (i + 1, moduleName ((ModuleType) i), true, mod.getType() == (ModuleType) i);
+    // модули по группам; текущий отмечен
+    bool first = true;
+    for (auto& grp : moduleGroups())
+    {
+        if (! first) m.addSeparator();
+        first = false;
+        m.addSectionHeader (grp.name);
+        for (auto t : grp.types)
+            m.addItem ((int) t + 1, moduleName (t), true, mod.getType() == t);
+    }
     juce::PopupMenu extra;
     mod.addMenuItems (extra);
     if (extra.getNumItems() > 0) { m.addSeparator(); m.addSubMenu ("Options", extra); }
@@ -236,8 +270,7 @@ void EidoEditor::showModuleMenu (Module& mod)
         else
         {
             safe->handleMenuResult (r);
-            if (auto* sp = dynamic_cast<SpectrumModule*> (safe.getComponent()))
-                proc.uiState.setProperty ("tilt", sp->getTilt(), nullptr);
+            safe->saveSettings (proc.uiState);
         }
     });
 }
@@ -297,6 +330,13 @@ void EidoEditor::paintOverChildren (juce::Graphics& g)
     else
         for (auto& m : modules)
             g.drawRoundedRectangle (m->getBounds().toFloat().reduced (0.5f), 12.0f, 1.0f);
+
+    // куда упадёт перетаскиваемый модуль — рамка 2 px сигнального цвета
+    if (dropTarget >= 0)
+    {
+        g.setColour (Colours::signal);
+        g.drawRoundedRectangle (modules[(size_t) dropTarget]->getBounds().toFloat().reduced (1.0f), 11.0f, 2.0f);
+    }
 }
 
 void EidoEditor::layoutModules()
@@ -322,8 +362,8 @@ void EidoEditor::layoutModules()
     }
     else
     {
-        // сетка 3 × 2, карточки с радиусом 12
-        const int gap = 10, cols = 3, rows = 2;
+        // сетка 4 × 2, карточки с радиусом 12
+        const int gap = 10, cols = kGridCols, rows = 2;
         const int cw = (rackArea.getWidth() - gap * (cols - 1)) / cols, ch = (rackArea.getHeight() - gap * (rows - 1)) / rows;
         for (int i = 0; i < kSlots; ++i)
         {

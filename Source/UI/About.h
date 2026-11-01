@@ -6,7 +6,7 @@ namespace eido
 // Версия и дата — показываются на странице About
 namespace AboutInfo
 {
-    inline const char* version = "v1";
+    inline const char* version = "v1.1";
     inline const char* repoUrl = "https://github.com/controloptioncommand/Eido-vst";
     inline const char* authorUrl = "https://t.me/nothiingnothingnothing";
     inline const char* date = "1st November 2026";
