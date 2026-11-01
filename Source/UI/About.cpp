@@ -237,8 +237,8 @@ void GameView::paint (juce::Graphics& g)
 void AboutPage::BackLogo::paintButton (juce::Graphics& g, bool over, bool)
 {
     // маленький логотип — клик возвращает в плагин
-    // фокус — без обводки: логотип просто становится сигнальным (оранжевым)
-    const auto c = hasKeyboardFocus (false) ? Colours::signal : over ? Colours::ink.withAlpha (0.7f) : Colours::ink;
+    // в About маленький логотип всегда сигнальный (оранжевый) в обеих темах; фокус — без обводки
+    const auto c = over ? Colours::signal.withAlpha (0.7f) : Colours::signal;
     LnF::drawPixelText (g, "Eido", getLocalBounds(), 1, c);
 }
 

@@ -75,8 +75,11 @@ bool Segmented::keyPressed (const juce::KeyPress& k)
 void LogoButton::paintButton (juce::Graphics& g, bool over, bool)
 {
     // пиксель шрифта = 1 px окна (на Retina — 2 физических): логотип читается именно пиксельным
-    // фокус — без обводки: логотип просто становится сигнальным (оранжевым)
-    const auto c = hasKeyboardFocus (false) ? Colours::signal : over ? Colours::ink.withAlpha (0.75f) : Colours::ink;
+    // Oxygen — логотип всегда сигнальный (оранжевый), Rubber — цвета текста (белый).
+    // Фокус — без обводки: в Rubber логотип становится сигнальным.
+    const bool oxygen = currentTheme() == ThemeId::Oxygen;
+    const auto base = oxygen || hasKeyboardFocus (false) ? Colours::signal : Colours::ink;
+    const auto c = over ? base.withAlpha (0.75f) : base;
     LnF::drawPixelText (g, "Eido", getLocalBounds(), 1, c);
 }
 
