@@ -323,6 +323,23 @@ int main (int argc, char** argv)
             juce::MessageManager::getInstance()->runDispatchLoopUntil (300);
             shoot ("game_" + tn);
             ed->showAboutForTest (false, false);
+            {
+                // Tab пропускает логотип; Escape закрывает игру, затем About
+                auto& about = ed->getAboutForTest();
+                bool logoFocusable = false;
+                std::function<void (juce::Component&)> scan = [&] (juce::Component& c)
+                {
+                    if (dynamic_cast<juce::Button*> (&c) != nullptr && c.getName() == "Eido" && c.getWantsKeyboardFocus()) logoFocusable = true;
+                    for (auto* ch : c.getChildren()) scan (*ch);
+                };
+                scan (*ed);
+                CHECK (! logoFocusable, "logo must not take keyboard focus");
+                ed->showAboutForTest (true, true);
+                about.keyPressed (juce::KeyPress (juce::KeyPress::escapeKey));
+                CHECK (about.isVisible(), "escape in game closes only the game");
+                about.keyPressed (juce::KeyPress (juce::KeyPress::escapeKey));
+                CHECK (! about.isVisible() && ed->getHeight() == EidoEditor::kStripH, "escape closes About and restores size");
+            }
             CHECK (ed->getHeight() == EidoEditor::kStripH, "about: strip size must be restored, got " << ed->getWidth() << "x" << ed->getHeight());
         }
         ed->setThemeForTest (ThemeId::Oxygen);

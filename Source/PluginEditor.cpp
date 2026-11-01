@@ -225,6 +225,7 @@ void EidoEditor::showAbout (bool show)
         about.setBackLogoBounds (logo.getBounds());
         about.setVisible (true);
         about.toFront (true);
+        about.grabKeyboardFocus();   // чтобы Escape сразу возвращал назад
     }
     else
     {

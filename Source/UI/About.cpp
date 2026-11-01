@@ -444,8 +444,17 @@ void FogLogo::blowForTest (juce::Point<float> from, juce::Point<float> to, int s
     }
 }
 
+bool AboutPage::keyPressed (const juce::KeyPress& k)
+{
+    if (k != juce::KeyPress::escapeKey) return false;
+    if (gameMode) showGame (false);
+    else if (onClose) onClose();
+    return true;
+}
+
 AboutPage::AboutPage()
 {
+    setWantsKeyboardFocus (true);
     setTitle ("About Eido");
     setDescription (juce::String ("Eido ") + AboutInfo::version + ", " + AboutInfo::date + ", " + AboutInfo::author);
     addAndMakeVisible (back);

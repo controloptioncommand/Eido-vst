@@ -101,6 +101,7 @@ class AboutPage : public juce::Component
 {
 public:
     AboutPage();
+    bool keyPressed (const juce::KeyPress& k) override;   // Escape — назад в плагин (логотип с клавиатуры недоступен)
     void paint (juce::Graphics& g) override;
     void resized() override;
     void showGame (bool show);
@@ -112,7 +113,7 @@ public:
 private:
     struct BackLogo : juce::Button
     {
-        BackLogo() : juce::Button ("Eido") { setTitle ("Back to Eido"); }
+        BackLogo() : juce::Button ("Eido") { setTitle ("Back to Eido"); setWantsKeyboardFocus (false); }   // Tab пропускает логотип
         void paintButton (juce::Graphics&, bool over, bool down) override;
     };
     // Невидимая кликабельная область поверх текста: внешне ничем не выделена

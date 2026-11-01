@@ -29,7 +29,7 @@ private:
 class LogoButton : public juce::Button
 {
 public:
-    LogoButton() : juce::Button ("Eido") { setTitle ("About Eido"); }
+    LogoButton() : juce::Button ("Eido") { setTitle ("About Eido"); setWantsKeyboardFocus (false); }   // Tab пропускает логотип
     void paintButton (juce::Graphics& g, bool over, bool down) override;
 };
 
