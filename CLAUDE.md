@@ -25,6 +25,11 @@ Eido (от греч. «созерцать») — вайбкод VST3/AU-визу
 - В README, патчноутах и любой другой публичной документации **не упоминать** эффект «Туман» на логотипе About, сову, игру и скрытые ссылки на странице About (версия → GitHub, «made by nnn» → Telegram). Это пасхалки, их находят сами.
 - Скриншоты игры и эффекта «Туман» в документацию не добавлять.
 
+## Руководство (PDF)
+- `docs/Eido-manual.pdf` — руководство пользователя (рус.), кладётся в архив релиза. Исходник — `docs/manual/Eido-manual.html` (стиль — как у PDF Mist).
+- **Обновлять руководство** при любом изменении модулей, управления, диапазонов или поведения: поправить текст в HTML и пересобрать `bash docs/manual/build.sh` (снимает свежие скриншоты тестом, `crop.py` нарезает, `print.js` печатает PDF через Chromium). Пересобранный PDF — посмотреть глазами: без пустых страниц и обрезанных картинок.
+- Пасхалки в руководстве не упоминать.
+
 ## Версии и патчноуты
 - Текущая версия — в файле `VERSION` (схема: v1, v1.01 … v2, v2.01 …). На странице About она же в `Source/UI/About.h` (`AboutInfo::version`, `AboutInfo::date`).
 - **У каждой версии обязателен патчноут** `docs/releases/<версия>.md` — без него CI не соберёт релиз.
@@ -58,5 +63,5 @@ cmake -B build -DEIDO_BUILD_TESTS=ON && cmake --build build --target EidoTest
 - `Source/Analysis/` — `Loudness` (BS.1770, LRA), `Pitch` (YIN для тюнера и осциллографа), `SignalBuffer` (кольцо сигнала на стороне интерфейса)
 - `Source/PluginEditor` — тулбар, раскладки Strip / Grid, меню модулей, About
 - `Source/UI/` — `LookAndFeel` (темы, шрифты Medeo, пиксельный логотип), `Module` (база модуля и стрелки ‹ ▲ ›), `WaveModules` (Scope, Waves, Spectrogram), `SpectrumModule` (Spectrum, Mid / Side), `MeterModules` (Loudness, VU, Stereo), `PitchModules` (Tuner, Oscilloscope), `HistoryModules` (Loudness History, Peak History), `About` (страница About, «Туман», игра), `Widgets`
-- `Tests/EidoTest.cpp` — офлайн-тест; `scripts/` — установка и проверка приватности; `docs/` — руководство (`MANUAL.md`), дизайн, картинки README, патчноуты
-- При изменении модулей или управления — обновлять `docs/MANUAL.md` (пасхалки там тоже не упоминать).
+- `Tests/EidoTest.cpp` — офлайн-тест; `scripts/` — установка и проверка приватности; `docs/` — руководство (`Eido-manual.pdf`, исходник в `docs/manual/`), дизайн, картинки README, патчноуты
+- При изменении модулей или управления — обновлять руководство (`docs/manual/Eido-manual.html` → `bash docs/manual/build.sh`), пасхалки там тоже не упоминать.

@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Eido — руководство</title>
+<style>
+@font-face { font-family: "Medeo Sans"; src: url("../../Resources/Fonts/MedeoSans-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Medeo Sans"; src: url("../../Resources/Fonts/MedeoSans-SemiBold.ttf"); font-weight: 600; }
+@font-face { font-family: "Medeo Mono"; src: url("../../Resources/Fonts/MedeoMono-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Medeo Mono"; src: url("../../Resources/Fonts/MedeoMono-SemiBold.ttf"); font-weight: 600; }
+@font-face { font-family: "Medeo Pixel"; src: url("../../Resources/Fonts/MedeoPixel-Regular.ttf"); }
+
+:root {
+  --window: #E4E5E1; --surface: #F5F5F2; --well: #E9EAE6; --track: #C2C3BE;
+  --ink: #131416; --ink2: #4B4D52; --signal: #E84A00; --carrier: #2740F0; --mod: #D7245E; --live: #138A62;
+  --outline: rgba(19,20,22,.12);
+}
+@page { size: A4; margin: 16mm 16mm 18mm 16mm; }
+@page :first { margin: 0; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; font-family: "Medeo Sans", sans-serif; font-size: 10pt; line-height: 1.5; color: var(--ink); background: #fff; }
+h1, h2, h3 { font-weight: 600; line-height: 1.2; margin: 0; }
+h2 { font-size: 20pt; margin: 0 0 4mm; padding-top: 1mm; }
+h2 .n { font-family: "Medeo Mono"; color: var(--signal); font-size: 11pt; vertical-align: 4pt; margin-right: 3mm; }
+h3 { font-size: 12pt; margin: 6mm 0 2mm; }
+p { margin: 0 0 2.5mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+li { margin-bottom: 1.2mm; }
+b, strong { font-weight: 600; }
+code, .mono { font-family: "Medeo Mono", monospace; font-size: 9pt; }
+code { background: var(--well); border: 1px solid var(--outline); border-radius: 4px; padding: 0 1.2mm; }
+.lead { font-size: 11.5pt; color: var(--ink2); margin-bottom: 5mm; }
+section { break-before: page; }
+.keep { break-inside: avoid; }
+
+figure { margin: 3mm 0 4mm; break-inside: avoid; }
+figure img { width: 100%; max-width: 150mm; margin: 0 auto; display: block; border-radius: 10px; border: 1px solid var(--outline); }
+figcaption { font-size: 8.5pt; color: var(--ink2); margin-top: 1.5mm; text-align: center; }
+.small img { max-width: 110mm; }
+.mid img { max-width: 118mm; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.side { display: grid; grid-template-columns: 56mm 1fr; gap: 6mm; align-items: start; margin-bottom: 5mm; break-inside: avoid; }
+.side figure { margin: 0; }
+.side h3 { margin-top: 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; font-size: 9.3pt; break-inside: auto; }
+th { text-align: left; font-weight: 600; color: var(--ink2); font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em;
+     border-bottom: 1px solid var(--ink); padding: 1.5mm 2mm 1.5mm 0; }
+td { border-bottom: 1px solid var(--outline); padding: 1.6mm 2mm 1.6mm 0; vertical-align: top; }
+tr { break-inside: avoid; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+td.r { font-family: "Medeo Mono"; font-size: 8.6pt; color: var(--ink2); white-space: nowrap; }
+
+.note { background: var(--surface); border: 1px solid var(--outline); border-left: 3px solid var(--signal); border-radius: 8px;
+        padding: 3mm 4mm; margin: 3mm 0 4mm; break-inside: avoid; }
+.note b:first-child { color: var(--signal); }
+.chip { display: inline-block; font-size: 8.5pt; font-weight: 600; border-radius: 99px; padding: 0 2mm; border: 1px solid var(--outline); background: var(--surface); }
+.c { color: var(--carrier); font-weight: 600; } .m { color: var(--mod); font-weight: 600; } .s { color: var(--signal); font-weight: 600; }
+.steps { counter-reset: s; list-style: none; padding: 0; }
+.steps li { counter-increment: s; position: relative; padding-left: 9mm; margin-bottom: 2.5mm; }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: .2mm; width: 6mm; height: 6mm; border-radius: 50%;
+  background: var(--ink); color: #fff; font-family: "Medeo Mono"; font-size: 8.5pt; text-align: center; line-height: 6mm; }
+
+/* обложка */
+.cover { height: 297mm; background: #0F1012; color: #EDEDE9; position: relative; overflow: hidden; break-after: page; }
+.cover .grid { position: absolute; inset: 0; background-image: radial-gradient(rgba(237,237,233,.10) 1px, transparent 1.2px); background-size: 6mm 6mm; }
+.cover .logo { position: absolute; left: 0; right: 0; top: 92mm; text-align: center; font-family: "Medeo Pixel"; font-size: 120pt; line-height: 1; letter-spacing: 0; }
+.cover .sub { position: absolute; left: 0; right: 0; top: 140mm; text-align: center; font-size: 13pt; color: #A9AAAE; }
+.cover .sub b { color: #FF6B2C; font-weight: 600; }
+.cover .shot { position: absolute; left: 38mm; right: 38mm; top: 160mm; }
+.cover .shot img { width: 100%; border-radius: 12px; border: 1px solid rgba(237,237,233,.12); }
+.cover .foot { position: absolute; left: 16mm; right: 16mm; bottom: 12mm; display: flex; justify-content: space-between;
+  font-family: "Medeo Mono"; font-size: 8.5pt; color: #A9AAAE; }
+
+.toc { columns: 2; column-gap: 8mm; list-style: none; padding: 0; margin-top: 4mm; }
+.toc li { break-inside: avoid; display: flex; gap: 3mm; padding: 1.6mm 0; border-bottom: 1px solid var(--outline); }
+.toc .mono { color: var(--signal); width: 7mm; }
+.algs { columns: 2; column-gap: 8mm; font-size: 9pt; }
+.algs div { break-inside: avoid; display: grid; grid-template-columns: 7mm 30mm 1fr; padding: .9mm 0; border-bottom: 1px solid var(--outline); }
+.algs .mono { color: var(--ink2); font-size: 8.3pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="grid"></div>
+  <div class="logo">Eido</div>
+  <div class="sub">Руководство пользователя · <b>v1.1</b></div>
+  <div class="shot"><img src="img/grid.jpg"></div>
+  <div class="foot"><span>visualizer &amp; meter · VST3 · AU · macOS</span><span>made by nnn</span></div>
+</div>
+
+<section style="break-before: auto">
+  <h2>Содержание</h2>
+  <ul class="toc">
+    <li><span class="mono">01</span>Что такое Eido</li>
+    <li><span class="mono">02</span>Установка</li>
+    <li><span class="mono">03</span>Окно</li>
+    <li><span class="mono">04</span>Как менять модули</li>
+    <li><span class="mono">05</span>Модули Wave</li>
+    <li><span class="mono">06</span>Модули Spectrum</li>
+    <li><span class="mono">07</span>Модули Loudness</li>
+    <li><span class="mono">08</span>Stereo и Tuner</li>
+    <li><span class="mono">09</span>Темы</li>
+    <li><span class="mono">10</span>Вопросы и ответы</li>
+  </ul>
+
+  <h2 style="margin-top: 10mm"><span class="n">01</span>Что такое Eido</h2>
+  <p class="lead">Eido — визуализатор и измеритель. Звук через плагин проходит <b>без изменений</b>: Eido только смотрит на сигнал.</p>
+  <p>Ставьте его последним на мастер-канал, чтобы видеть итог, или на любую дорожку, шину или возврат.</p>
+  <ul>
+    <li>Восемь слотов, в каждый — любой из двенадцати модулей, в том числе один и тот же несколько раз.</li>
+    <li>Два режима окна: длинная полоса <b>Strip</b> и сетка <b>Grid</b>.</li>
+    <li>Громкость по ITU-R BS.1770-4 / EBU R128: Momentary, Short-term, Integrated, LRA.</li>
+    <li>Раскладка, модули и их настройки сохраняются в проекте.</li>
+  </ul>
+  <div class="note"><b>Как читать.</b> Названия модулей и кнопок даны так, как они подписаны в плагине (по-английски). Диапазоны — моноширинным шрифтом.</div>
+
+</section>
+
+<section>
+  <h2><span class="n">02</span>Установка</h2>
+  <p>Нужен Mac с macOS 11 или новее, Apple Silicon или Intel. Плагин подписан без Apple Developer ID, поэтому ставится скриптом, который снимает карантин.</p>
+  <h3>Одной командой в Терминале</h3>
+  <p>Нужен установленный <code>gh</code> (GitHub CLI):</p>
+  <p><code style="display:block; padding: 2.5mm 3mm; line-height: 1.6; white-space: pre-wrap; word-break: break-all;">cd ~/Downloads &amp;&amp; rm -rf Eido-macOS Eido-macOS.zip &amp;&amp; gh release download -R controloptioncommand/Eido-vst -p Eido-macOS.zip &amp;&amp; unzip -q Eido-macOS.zip -d Eido-macOS &amp;&amp; bash Eido-macOS/install-mac.sh</code></p>
+  <h3>Вручную</h3>
+  <ol class="steps">
+    <li>Скачайте <b>Eido-macOS.zip</b> со страницы релизов: <span class="mono">github.com/controloptioncommand/Eido-vst/releases</span>, распакуйте.</li>
+    <li>В Терминале: <code>bash ~/Downloads/Eido-macOS/install-mac.sh</code>. Скрипт кладёт <code>Eido.vst3</code> в <code>~/Library/Audio/Plug-Ins/VST3</code>, <code>Eido.component</code> — в <code>~/Library/Audio/Plug-Ins/Components</code>.</li>
+    <li>Ableton: Settings → Plug-Ins → Rescan. Eido появится среди аудиоэффектов (VST3 и Audio Units).</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="n">03</span>Окно</h2>
+  <h3>Тулбар</h3>
+  <figure><img src="img/toolbar.jpg"></figure>
+  <table>
+    <tr><th style="width:40mm">Элемент</th><th>Что делает</th></tr>
+    <tr><td>Eido (логотип)</td><td>Открывает страницу About. Клик по маленькому логотипу там — назад, или клавиша Escape. С клавиатуры (Tab) логотип пропускается: About открывается через Настройки → About Eido.</td></tr>
+    <tr><td>Strip / Grid</td><td>Режим окна, см. ниже.</td></tr>
+    <tr><td>Пауза</td><td>Замораживает картинку всех модулей. Звук идёт как обычно, Integrated продолжает копиться. На паузе кнопка становится оранжевым треугольником.</td></tr>
+    <tr><td>Сброс</td><td>Круговая стрелка: обнуляет Integrated, LRA, удержание пиков и историю модулей.</td></tr>
+    <tr><td>48 kHz</td><td>Частота дискретизации проекта.</td></tr>
+    <tr><td>Настройки</td><td>Appearance (тема), Layout (режим окна), Reset meters, Default modules (вернуть набор модулей по умолчанию), About Eido.</td></tr>
+  </table>
+  <h3>Режимы</h3>
+  <figure><img src="img/strip.jpg"><figcaption>Strip — длинная полоса из восьми модулей.</figcaption></figure>
+  <ul>
+    <li><b>Strip</b> — длинная полоса из восьми модулей в ряд, как у MiniMeters. По умолчанию <span class="mono">1600×240</span>. Имена модулей и стрелки появляются при наведении.</li>
+    <li><b>Grid</b> — сетка 4 × 2 из крупных карточек, по умолчанию <span class="mono">1400×720</span>. Имя модуля видно всегда.</li>
+  </ul>
+  <figure class="small"><img src="img/grid.jpg"><figcaption>Grid — сетка 4 × 2.</figcaption></figure>
+  <p>Окно тянется за правый нижний угол как угодно (минимум <span class="mono">560×170</span>). Размер запоминается отдельно для Strip и Grid. Раскладка, модули в слотах, их настройки и размеры сохраняются <b>в проекте</b> вместе с плагином. Тема — общая для всех проектов.</p>
+</section>
+
+<section>
+  <h2><span class="n">04</span>Как менять модули</h2>
+  <p>В Eido восемь слотов, в каждый можно поставить любой из двенадцати модулей, в том числе один и тот же несколько раз.</p>
+  <h3>Заменить модуль</h3>
+  <p>Наведите курсор на модуль — снизу справа появятся стрелки <b>‹ ▲ ›</b>. Нажмите <b>▲</b>: откроется меню, модули в нём сгруппированы:</p>
+  <table>
+    <tr><th style="width:40mm">Группа</th><th>Модули</th></tr>
+    <tr><td>Wave</td><td>Scope, Waves, Oscilloscope, Peak History</td></tr>
+    <tr><td>Spectrum</td><td>Spectrum, Mid / Side, Spectrogram</td></tr>
+    <tr><td>Loudness</td><td>Loudness, Loudness History, VU</td></tr>
+    <tr><td>Stereo and pitch</td><td>Stereo, Tuner</td></tr>
+  </table>
+  <p>Там же — <b>Options</b> (настройки модуля, если они есть) и Move left / Move right.</p>
+  <h3>Переставить модуль</h3>
+  <ul>
+    <li>Перетащите модуль мышью на другой слот: целевой слот подсвечивается оранжевой рамкой, после отпускания модули меняются местами.</li>
+    <li>Или стрелками <b>‹ ›</b>: модуль сдвигается на одну позицию влево или вправо.</li>
+  </ul>
+  <div class="note"><b>С клавиатуры.</b> Tab переводит фокус на модуль, Option + ← / → двигают его, Return открывает меню.</div>
+</section>
+
+<section>
+  <h2><span class="n">05</span>Модули Wave</h2>
+  <div class="side">
+    <figure><img src="img/m_scope.jpg"></figure>
+    <div>
+      <h3>Scope</h3>
+      <p>Плотная волна: одна вертикальная полоска на каждый пиксель ширины, от минимума до максимума сигнала за этот отрезок. Цвет — громкость по шкале <span class="mono">−24…0 dB</span> (легенда сверху справа): синий — тихо, оранжевый — у самого 0. Пунктирные линии — −6 и −12 дБ.</p>
+    </div>
+  </div>
+  <div class="side">
+    <figure><img src="img/m_waves.jpg"></figure>
+    <div>
+      <h3>Waves</h3>
+      <p>История волны «стопкой»: каждые 1/15 с новая линия появляется спереди, старые уезжают назад и бледнеют. Передняя оранжевая линия — текущий момент. Форма нормализуется, чтобы тихий сигнал тоже был виден.</p>
+    </div>
+  </div>
+  <div class="side">
+    <figure><img src="img/m_oscilloscope.jpg"></figure>
+    <div>
+      <h3>Oscilloscope</h3>
+      <p>Несколько периодов волны, синхронизированных по высоте тона: для тонального звука картинка стоит на месте, и видно саму форму волны (синус, пила, перегруз). Окно — целое число периодов, примерно 8 мс; без тона — 20 мс. Сверху слева — нота, частота и длина окна. Линия меняет цвет по пику.</p>
+    </div>
+  </div>
+  <div class="side">
+    <figure><img src="img/m_peakhistory.jpg"></figure>
+    <div>
+      <h3>Peak History</h3>
+      <p>Лента громкости во времени, как волна в DAW: левый канал сверху, правый снизу. Светлая часть — пики, насыщенная — RMS (средняя громкость). Колонка — 20 мс. Шкала в децибелах (<span class="mono">−48…0</span>), пунктир −6, −12, −24 дБ. Удобно смотреть, как работает компрессор: при сильной компрессии пики и RMS почти сливаются.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Модули Spectrum</h2>
+  <div class="side">
+    <figure><img src="img/m_spectrum.jpg"></figure>
+    <div>
+      <h3>Spectrum</h3>
+      <p>Спектр: по горизонтали частота <span class="mono">20 Hz…20 kHz</span>, по вертикали уровень <span class="mono">0…−84 dB</span>. Наведите курсор — сверху справа появится плашка: уровень, частота и ближайшая нота с отклонением в центах, например <code>−8.1 dB · 111.1 Hz · A2 +17 ct</code>.</p>
+      <p>Options → <b>Slope</b>: наклон 0, 3 или 4.5 дБ на октаву (по умолчанию 4.5). С наклоном розовый шум выглядит ровным, а сведённый трек — примерно горизонтальным; без наклона — «честные» децибелы.</p>
+    </div>
+  </div>
+  <div class="side">
+    <figure><img src="img/m_midside.jpg"></figure>
+    <div>
+      <h3>Mid / Side</h3>
+      <p>Два спектра на одном графике: Mid (середина, (L+R)/2) — светлой кривой с заливкой, Side (сторона, (L−R)/2) — розовой линией. Где розовая линия близко к светлой — там звук широкий; где далеко ниже — почти моно. Бас обычно держат в моно: Side на низах должен быть сильно ниже Mid. Наклон — тот же пункт Slope.</p>
+    </div>
+  </div>
+  <div class="side">
+    <figure><img src="img/m_spectrogram.jpg"></figure>
+    <div>
+      <h3>Spectrogram</h3>
+      <p>Спектр во времени: по горизонтали время (новое справа), по вертикали частота <span class="mono">20 Hz…20 kHz</span>, цвет — громкость. Хорошо видны бочка (вертикальные вспышки внизу), тональные партии (горизонтальные полосы) и шипящие.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">07</span>Модули Loudness</h2>
+  <div class="side">
+    <figure><img src="img/m_loudness.jpg"></figure>
+    <div>
+      <h3>Loudness</h3>
+      <p>Главный измеритель громкости:</p>
+      <ul>
+        <li><b>L, R</b> — пиковый уровень каждого канала, спад 20 дБ/с; черта — удержание пика (1.5 с), оранжевая у 0 дБ.</li>
+        <li><b>M</b> — Momentary, громкость за последние 0.4 с.</li>
+        <li><b>S</b> — Short-term, громкость за последние 3 с.</li>
+        <li>Справа: <b>Integrated</b> — средняя громкость с момента сброса (то, что меряют стриминги), Short-term, Momentary и <b>Peak</b> — максимальный пик с момента сброса.</li>
+      </ul>
+    </div>
+  </div>
+  <p>Громкость считается по ITU-R BS.1770-4 / EBU R128: K-фильтр, тишина тише −70 LUFS и тихие места на 10 LU ниже среднего в Integrated не попадают. Integrated копится и при закрытом окне плагина. Ориентиры: стриминги нормализуют примерно к −14 LUFS, эфир — −23 LUFS.</p>
+  <div class="side">
+    <figure><img src="img/m_loudnesshistory.jpg"></figure>
+    <div>
+      <h3>Loudness History</h3>
+      <p>Громкость за последние 30 секунд: синяя линия с заливкой — Short-term, тонкая серая — Momentary, оранжевый пунктир — Integrated. Сверху — Short-term, Integrated и <b>LRA</b> (Loudness Range, диапазон громкости по EBU Tech 3342 — насколько различаются тихие и громкие части: 3–6 LU — плотная поп-музыка, 10+ LU — кино и классика).</p>
+    </div>
+  </div>
+  <div class="side">
+    <figure><img src="img/m_vu.jpg"></figure>
+    <div>
+      <h3>VU</h3>
+      <p>Стрелочный VU-метр, как на старых пультах: медленная стрелка (~300 мс) показывает среднюю громкость, а не пики. <b>0 VU = −18 dBFS RMS</b> — привычный уровень для гейн-стейджинга: держите дорожки около 0 VU, и плагинам-эмуляциям железа будет комфортно. Красная зона — выше 0.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">08</span>Stereo и Tuner</h2>
+  <div class="side">
+    <figure><img src="img/m_stereo.jpg"></figure>
+    <div>
+      <h3>Stereo</h3>
+      <p>Полярный стереометр. Каждая точка — момент сигнала: по вертикали середина (M), влево — левый канал (L), вправо — правый (R); чем дальше от центра, тем громче (<span class="mono">−40…0 dB</span>). Моно — вертикальный столб, широкая стереокартинка — веер, звук только в одном канале — луч на L или R.</p>
+      <p>Внизу — <b>корреляция</b> от −1 до +1: около +1 — моно-совместимо, около 0 — очень широко, ниже 0 (метка оранжевая) — проблемы с фазой, в моно звук провалится.</p>
+    </div>
+  </div>
+  <div class="side">
+    <figure><img src="img/m_tuner.jpg"></figure>
+    <div>
+      <h3>Tuner</h3>
+      <ul>
+        <li>Крупно — нота с октавой: <code>C5</code>, <code>D2</code>, <code>A#3</code> (до первой октавы — <code>C4</code> = 261.6 Гц).</li>
+        <li>Под ней — частота целым числом, например <code>4853 Hz</code>, и отклонение от ноты в центах.</li>
+        <li>Шкала <span class="mono">−50…+50</span> центов: метка зелёная, если нота чистая (±5 центов), оранжевая — если нет.</li>
+      </ul>
+      <p>Диапазон — примерно от 25 Гц до 5 кГц, точность — лучше 3 центов. Тюнер слушает сумму каналов и лучше всего работает с одним голосом или инструментом (бас, вокал, синт-лид); на аккорде или полном миксе он покажет самую сильную ноту, часто — бочку или бас. Когда тона нет, последняя нота остаётся бледной.</p>
+      <p>Options → <b>Reference</b>: эталон A4 = 432, 440, 442 или 444 Гц (по умолчанию 440).</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">09</span>Темы</h2>
+  <p><b>Oxygen</b> — светлая, <b>Rubber</b> — тёмная. Настройки → Appearance: Match system (следовать теме macOS), Oxygen или Rubber. Включённое в macOS «Уменьшить движение» останавливает анимацию Waves (обновляется только передняя линия).</p>
+  <figure class="small"><img src="img/grid_oxygen.jpg"><figcaption>Светлая тема Oxygen.</figcaption></figure>
+
+  <h2 style="margin-top: 10mm"><span class="n">10</span>Вопросы и ответы</h2>
+  <table>
+    <tr><th style="width:56mm">Вопрос</th><th>Ответ</th></tr>
+    <tr><td>Плагин меняет звук?</td><td>Нет. Eido копирует сигнал в интерфейс и ничего не пишет обратно — тест сборки проверяет, что звук проходит бит в бит.</td></tr>
+    <tr><td>Integrated не сбрасывается между проигрываниями</td><td>Так и задумано: он копится, пока не нажмёте сброс. Нажимайте его перед проигрыванием трека целиком.</td></tr>
+    <tr><td>Тюнер прыгает на миксе</td><td>Тюнер рассчитан на одну ноту. Поставьте отдельный экземпляр Eido на нужную дорожку.</td></tr>
+    <tr><td>Short-term показывает −∞ первые 3 секунды</td><td>По стандарту Short-term — это окно 3 с; пока оно не заполнилось, значения нет.</td></tr>
+    <tr><td>Окно маленькое или большое</td><td>Тяните за правый нижний угол. Размер сохраняется в проекте отдельно для Strip и Grid.</td></tr>
+    <tr><td>Ableton не видит плагин</td><td>Проверьте, что включены Use VST3 Plug-In System Folders или Use Audio Units, и нажмите Rescan. Если macOS пишет, что плагин повреждён, запустите <code>install-mac.sh</code> ещё раз — он снимает карантин.</td></tr>
+  </table>
+  <p style="margin-top:8mm; color: var(--ink2); font-size: 9pt;">Eido v1.1 · made by nnn · написан на C++ и JUCE 8. Шрифты Medeo — SIL Open Font License.<br>Исходники и релизы: <span class="mono">github.com/controloptioncommand/Eido-vst</span></p>
+</section>
+
+</body>
+</html>

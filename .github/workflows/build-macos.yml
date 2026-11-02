@@ -71,6 +71,7 @@ jobs:
           cp -R build/Eido_artefacts/Release/VST3/Eido.vst3 dist/
           cp -R build/Eido_artefacts/Release/AU/Eido.component dist/
           cp scripts/install-mac.sh dist/
+          cp docs/Eido-manual.pdf dist/
           cd dist && zip -qry ../Eido-macOS.zip .
 
       - uses: actions/upload-artifact@v4
